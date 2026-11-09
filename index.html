@@ -1,0 +1,1767 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>REHAB 個人健康監測摘要</title>
+  <link rel="stylesheet" href="flatpickr.min.css">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #183330;
+      --muted: #647773;
+      --line: #dce6e2;
+      --paper: #fff;
+      --canvas: #f3f7f5;
+      --green: #176b59;
+      --green-dark: #105344;
+      --mint: #e5f3ed;
+      --amber: #a45b14;
+      --amber-bg: #fff4e5;
+      --blue: #39738a;
+      --blue-bg: #eaf4f8;
+      --shadow: 0 12px 32px rgb(25 57 49 / 5%);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 15px/1.6 "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+    button,select { font: inherit; }
+    button:focus-visible,select:focus-visible { outline: 3px solid #d29838; outline-offset: 3px; }
+    .topbar { background: var(--paper); border-bottom: 1px solid var(--line); }
+    .topbar-inner, footer { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
+    .topbar-inner { min-height: 82px; display: flex; align-items: center; gap: 14px; }
+    .brand-mark {
+      width: 42px; height: 42px; display: grid; place-items: center;
+      border-radius: 12px; color: #fff; background: var(--green);
+    }
+    .brand-mark svg { width: 24px; height: 24px; }
+    .brand-kicker { margin: 0; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+    h1 { margin: 0; font-size: 18px; line-height: 1.35; }
+    .topbar-note { margin-left: auto; color: var(--muted); font-size: 13px; }
+    .page-layout {
+      display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px;
+      width: min(1120px, calc(100% - 48px)); margin: 0 auto;
+    }
+    .page-layout.has-sidebar { grid-template-columns: 220px minmax(0, 1fr); }
+    .record-sidebar {
+      position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto;
+      margin-top: 34px; padding: 14px; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--paper); box-shadow: var(--shadow);
+    }
+    .record-sidebar h2 { margin: 0 0 10px; font-size: 14px; }
+    .record-list { display: grid; gap: 6px; }
+    .record-option {
+      width: 100%; padding: 9px 11px; border: 1px solid transparent; border-radius: 8px;
+      color: var(--ink); background: transparent; text-align: left; cursor: pointer;
+    }
+    .record-option:hover { background: #f2f7f5; }
+    .record-option[aria-pressed="true"] { border-color: #b8d7ca; color: var(--green-dark); background: var(--mint); font-weight: 700; }
+    main { min-width: 0; margin: 0; padding: 34px 0 20px; }
+    .import-toolbar { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; }
+    .monitoring-person-control { display: grid; gap: 2px; min-width: 150px; }
+    .monitoring-person-control label { color: var(--muted); font-size: 11px; }
+    .monitoring-person-control input {
+      width: 150px; min-height: 38px; padding: 6px 9px; border: 1px solid #b8c9c5;
+      border-radius: 7px; color: var(--ink); background: var(--paper); font: inherit;
+    }
+    .import-button {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 13px;
+      border: 1px solid #b8c9c5; border-radius: 7px; color: var(--green-dark);
+      background: var(--paper); font-size: 13px; font-weight: 650; cursor: pointer;
+    }
+    .import-button:hover { background: #e9f0ee; }
+    .import-button svg { width: 17px; height: 17px; }
+    .file-input { display: none; }
+    .import-status { margin: 0 0 14px; color: var(--green); font-size: 12px; text-align: right; overflow-wrap: anywhere; }
+    .import-status:empty { display: none; }
+    .import-status[data-error="true"] { color: #a52e2e; }
+    .hero {
+      position: relative; overflow: hidden; display: flex; align-items: flex-end;
+      justify-content: space-between; gap: 24px; padding: 30px 34px;
+      color: #fff; background: linear-gradient(115deg, #155d4d, #21846a);
+      border-radius: 16px; box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: ""; position: absolute; width: 270px; height: 270px; right: 12%; top: -190px;
+      border: 1px solid rgb(255 255 255 / 15%); border-radius: 50%;
+      box-shadow: 0 0 0 28px rgb(255 255 255 / 4%), 0 0 0 58px rgb(255 255 255 / 3%);
+    }
+    .hero-copy, .hero-date { position: relative; z-index: 1; }
+    .hero-label { margin: 0 0 8px; color: #cde9dc; font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+    .hero h2 { margin: 0; font-size: clamp(26px, 4vw, 36px); letter-spacing: .01em; }
+    .hero-subtitle { margin: 8px 0 0; color: #e1f1e9; font-size: 14px; }
+    .hero-date { flex: none; text-align: right; }
+    .hero-date span { display: block; color: #cde9dc; font-size: 12px; }
+    .hero-date strong { display: block; margin-top: 2px; font-size: 20px; font-variant-numeric: tabular-nums; }
+    .section { margin-top: 28px; }
+    .trend-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 28px; align-items: start; }
+    .trend-grid > .section { min-width: 0; margin-top: 0; }
+    .section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 14px; }
+    .section-heading h3 { margin: 0; font-size: 17px; }
+    .section-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+    .identity-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px;
+      overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--line);
+      box-shadow: var(--shadow);
+    }
+    .identity-item { min-height: 92px; padding: 17px 18px; background: var(--paper); }
+    .identity-item span { display: block; color: var(--muted); font-size: 12px; }
+    .identity-item strong { display: block; margin-top: 5px; font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+    .empty-value { color: #91a09c; font-weight: 400 !important; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .stat-card {
+      min-width: 0; padding: 18px 20px 16px; background: var(--paper);
+      border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+    }
+    .stat-label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .stat-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--green); }
+    .stat-card:nth-child(2) .stat-dot { background: var(--blue); }
+    .stat-card:nth-child(3) .stat-dot { background: #d08b37; }
+    .stat-card:nth-child(4) .stat-dot { background: #8a71b5; }
+    .stat-value { display: flex; align-items: baseline; gap: 7px; margin-top: 12px; }
+    .stat-value strong { font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+    .stat-value span { color: var(--muted); font-size: 12px; }
+    .stat-change { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .trend-card {
+      padding: 22px 24px 18px; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--paper); box-shadow: var(--shadow);
+    }
+    .trend-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+    .trend-head h4 { margin: 0; font-size: 15px; }
+    .trend-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .trend-key { display: flex; gap: 14px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .trend-key span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-line { width: 15px; height: 3px; border-radius: 3px; background: var(--green); }
+    .chart-wrap { margin-top: 12px; }
+    .chart { display: block; width: 100%; height: auto; overflow: visible; }
+    .chart text { fill: var(--muted); font: 12px "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+    .chart .grid-line { stroke: #e8efec; stroke-width: 1; }
+    .chart .trend-line { fill: none; stroke: var(--green); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .chart .area { fill: url(#areaFill); }
+    .chart .point { fill: #fff; stroke: var(--green); stroke-width: 3; }
+    .chart .value-label { fill: var(--ink); font-size: 13px; font-weight: 700; }
+    .bp-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; }
+    .bp-dot.systolic { background: #df7059; }
+    .bp-dot.diastolic { background: #647fd0; }
+    .chart .bp-range-bar { fill: url(#bpRangeGradient); }
+    .chart .bp-systolic-point { fill: #df7059; stroke: #fff; stroke-width: 2; }
+    .chart .bp-diastolic-point { fill: #647fd0; stroke: #fff; stroke-width: 2; }
+    .chart .bp-systolic-label { fill: #b94f39; font-size: 12px; font-weight: 700; }
+    .chart .bp-diastolic-label { fill: #4c65b4; font-size: 12px; font-weight: 700; }
+    #heart-rate-chart text { font-size: 18px; }
+    #heart-rate-chart .value-label { font-size: 32px; }
+    #blood-pressure-chart text { font-size: 18px; }
+    #blood-pressure-chart .bp-systolic-label,#blood-pressure-chart .bp-diastolic-label { font-size: 32px; }
+    .bp-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 4px 0 0 58px; color: var(--muted); font-size: 12px; }
+    .bp-legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .chart .spo2-line { fill: none; stroke: #4f9dbe; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .chart .spo2-point { fill: #fff; stroke: #4f9dbe; stroke-width: 3; }
+    .chart .spo2-label { fill: #397f9c; font-size: 12px; font-weight: 700; }
+    #spo2-chart text { font-size: 18px; }
+    #spo2-chart .spo2-label { font-size: 32px; }
+    .chart .temperature-line { fill: none; stroke: #d69b42; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .chart .temperature-point { fill: #fff; stroke: #d69b42; stroke-width: 3; }
+    .chart .temperature-label { fill: #a87527; font-size: 12px; font-weight: 700; }
+    #temperature-chart text { font-size: 18px; }
+    #temperature-chart .temperature-label { font-size: 32px; }
+    .timeline { position: relative; display: grid; gap: 14px; }
+    .measurement-card {
+      position: relative; display: grid; grid-template-columns: 102px minmax(0, 1fr);
+      overflow: hidden; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--paper); box-shadow: var(--shadow);
+    }
+    .rehab-group { display: grid; gap: 10px; }
+    .rehab-group-heading {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+      gap: 10px 16px; padding: 12px 14px; border: 1px solid var(--line);
+      border-radius: 10px; background: #f7faf8;
+    }
+    .rehab-group-heading h4 { margin: 0; color: var(--green-dark); font-size: 14px; }
+    .rehab-group-measurements { display: grid; gap: 10px; padding-left: 14px; border-left: 2px solid #dfece7; }
+    .rehab-group-note { margin: 4px 0; color: var(--muted); font-size: 13px; }
+    .stay-times { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stay-times[hidden] { display: none; }
+    .stay-time {
+      display: flex; align-items: baseline; gap: 7px; padding: 5px 10px;
+      border: 1px solid var(--line); border-radius: 7px; background: var(--paper);
+    }
+    .stay-time span { color: var(--muted); font-size: 11px; }
+    .stay-time strong { font-size: 12px; font-weight: 600; }
+    .stay-time-edit-form { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px; width: 100%; }
+    .stay-time-edit-form[hidden] { display: none; }
+    .stay-time-edit-field { display: grid; gap: 4px; }
+    .stay-time-edit-field label { color: var(--muted); font-size: 11px; }
+    .stay-time-edit-field input {
+      min-height: 34px; padding: 5px 8px; border: 1px solid #b8c9c5;
+      border-radius: 6px; color: var(--ink); background: #fff; font: inherit;
+    }
+    .flatpickr-time input { min-height: 0; padding: 2px; border: 0; border-radius: 0; font: inherit; }
+    .measurement-time {
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      gap: 3px; padding: 22px 12px; color: var(--green); background: #f0f8f4;
+      border-right: 1px solid var(--line);
+    }
+    .measurement-time strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+    .measurement-time span { color: var(--muted); font-size: 11px; }
+    .measurement-content { min-width: 0; padding: 20px 22px; }
+    .measurement-title { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .measurement-title h4 { margin: 0; font-size: 15px; }
+    .observer { color: var(--muted); font-size: 12px; }
+    .measurement-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .measurement-action, .form-button {
+      padding: 7px 12px; border: 1px solid #b8c9c5; border-radius: 7px;
+      color: var(--green-dark); background: var(--paper); font-size: 13px;
+      font-weight: 650; cursor: pointer;
+    }
+    .measurement-action.primary, .form-button.primary { border-color: var(--green); color: #fff; background: var(--green); }
+    .measurement-action:disabled { cursor: not-allowed; opacity: .55; }
+    .measurement-form {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+      margin: 0 0 16px; padding: 16px; border: 1px solid var(--line);
+      border-radius: 10px; background: var(--paper);
+    }
+    .measurement-form[hidden] { display: none; }
+    .measurement-form h4 { grid-column: 1 / -1; margin: 0; font-size: 15px; }
+    .measurement-field { display: grid; gap: 5px; min-width: 0; }
+    .measurement-group-field { grid-column: span 2; }
+    .measurement-note-field { grid-column: span 2; }
+    .measurement-field[hidden] { display: none; }
+    .measurement-field label { color: var(--muted); font-size: 12px; }
+    .measurement-field input, .measurement-field textarea {
+      width: 100%; min-height: 38px; padding: 7px 9px; border: 1px solid #b8c9c5;
+      border-radius: 6px; color: var(--ink); background: #fff; font: inherit;
+    }
+    .checkbox-field { margin: 0; padding: 9px 11px 11px; border: 1px solid var(--line); border-radius: 8px; }
+    .checkbox-field legend { padding: 0 4px; color: var(--muted); font-size: 12px; }
+    .checkbox-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+    .measurement-field .checkbox-option { display: flex; align-items: center; gap: 7px; color: var(--ink); cursor: pointer; }
+    .measurement-field .checkbox-option input[type="checkbox"] {
+      width: 16px; min-height: 16px; margin: 0; padding: 0;
+      border: 0; accent-color: var(--green);
+    }
+    .measurement-field textarea { min-height: 64px; resize: vertical; }
+    .measurement-field input:focus-visible, .measurement-field textarea:focus-visible {
+      outline: 3px solid #d29838; outline-offset: 2px;
+    }
+    .measurement-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+    .vital-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 9px; margin-top: 16px; }
+    .vital {
+      min-width: 0; padding: 11px 12px; background: #f7faf8;
+      border: 1px solid #edf2ef; border-radius: 8px;
+    }
+    .vital span { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .vital strong { display: block; margin-top: 4px; font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .vital small { color: var(--muted); font-size: 10px; font-weight: 400; }
+    .detail-row { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px 24px; margin-top: 14px; }
+    .detail { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; min-width: 0; }
+    .detail-label { color: var(--muted); font-size: 12px; }
+    .tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+    .tag { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; background: var(--mint); color: var(--green-dark); font-size: 12px; }
+    .tag.result { background: var(--blue-bg); color: #315f73; }
+    .tag.pending { background: var(--amber-bg); color: var(--amber); }
+    .stay-note {
+      margin-top: 14px; padding: 11px 14px; display: flex; align-items: center; gap: 9px;
+      border-radius: 8px; background: #f7faf8; color: var(--muted); font-size: 12px;
+    }
+    .stay-note svg { flex: none; width: 16px; height: 16px; color: var(--green); }
+    footer { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    @media (max-width: 900px) {
+      .identity-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .vital-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .trend-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .topbar-inner, .page-layout, footer { width: min(100% - 32px, 1120px); }
+      .topbar-inner { min-height: 72px; flex-wrap: wrap; padding: 12px 0; }
+      .page-layout, .page-layout.has-sidebar { grid-template-columns: minmax(0, 1fr); gap: 0; }
+      .record-sidebar { position: static; max-height: none; margin-top: 18px; padding: 12px; }
+      .record-list { display: flex; overflow-x: auto; gap: 7px; padding-bottom: 3px; }
+      .record-option { width: auto; flex: 0 0 auto; white-space: nowrap; }
+      main { padding-top: 22px; }
+      .brand-mark { width: 38px; height: 38px; }
+      h1 { font-size: 16px; }
+      .topbar-note { display: none; }
+      .hero { display: block; padding: 24px 22px; border-radius: 13px; }
+      .hero-date { margin-top: 18px; text-align: left; }
+      .hero-date strong { display: inline; margin-left: 7px; font-size: 17px; }
+      .identity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .identity-item { min-height: 78px; padding: 13px 14px; }
+      .section { margin-top: 23px; }
+      .section-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+      .rehab-group-heading { align-items: flex-start; flex-direction: column; }
+      .stay-times { width: 100%; }
+      .stay-time { flex: 1; align-items: flex-start; flex-direction: column; gap: 0; }
+      .stat-grid { gap: 9px; }
+      .stat-card { padding: 14px; }
+      .stat-value strong { font-size: 25px; }
+      .trend-card { padding: 17px 14px 12px; }
+      .trend-head { flex-direction: column; gap: 8px; }
+      .trend-key { gap: 10px; }
+      .chart text { font-size: 10px; }
+      #heart-rate-chart text { font-size: 15px; }
+      #heart-rate-chart .value-label { font-size: 32px; }
+      #spo2-chart text { font-size: 15px; }
+      #spo2-chart .spo2-label { font-size: 32px; }
+      #temperature-chart text { font-size: 15px; }
+      #temperature-chart .temperature-label { font-size: 32px; }
+      #blood-pressure-chart text { font-size: 20px; }
+      #blood-pressure-chart .bp-systolic-label,#blood-pressure-chart .bp-diastolic-label { font-size: 32px; }
+      .measurement-card { grid-template-columns: 1fr; }
+      .measurement-form { grid-template-columns: 1fr; }
+      .measurement-form-actions { grid-column: auto; }
+      .measurement-time { flex-direction: row; justify-content: flex-start; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .measurement-time strong { font-size: 17px; }
+      .measurement-content { padding: 16px; }
+      .measurement-title { align-items: flex-start; flex-direction: column; gap: 2px; }
+      .measurement-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .vital-grid { gap: 7px; }
+      .vital { padding: 9px; }
+      .vital strong { font-size: 16px; }
+      .detail-row { gap: 9px; }
+      footer { padding-bottom: 12px; flex-direction: column; gap: 4px; }
+    }
+    @media print {
+      @page { margin: 14mm; }
+      body { background: #fff; }
+      .topbar-inner, .page-layout, footer { width: 100%; }
+      .page-layout, .page-layout.has-sidebar { grid-template-columns: minmax(0, 1fr); }
+      .record-sidebar { display: none !important; }
+      main { padding: 16px 0; }
+      .hero, .identity-grid, .stat-card, .trend-card, .measurement-card { box-shadow: none; }
+      .hero { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .measurement-card, .trend-card { break-inside: avoid; }
+      footer { padding-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12h4l2.2-6 4.1 12 2.2-6H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <p class="brand-kicker">人員照護紀錄</p>
+        <h1>REHAB 生命徵象監測摘要</h1>
+      </div>
+      <div class="import-toolbar">
+        <input class="file-input" id="import-file" type="file" accept=".json,application/json">
+        <div class="monitoring-person-control">
+          <label for="current-monitoring-person">監測人員</label>
+          <input id="current-monitoring-person" type="text" autocomplete="name" placeholder="請填寫姓名">
+        </div>
+        <button class="import-button" id="import-button" type="button" aria-controls="import-file">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          匯入檔案
+        </button>
+        <button class="import-button" id="add-person-button" type="button" aria-controls="person-form" aria-expanded="false">新增人員</button>
+        <button class="import-button" id="export-button" type="button" disabled>匯出更新檔案</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-layout" id="page-layout">
+    <aside class="record-sidebar" id="record-sidebar" hidden aria-labelledby="record-sidebar-heading">
+      <h2 id="record-sidebar-heading">人員名單</h2>
+      <nav class="record-list" id="record-list" aria-label="選擇人員"></nav>
+    </aside>
+    <main>
+    <p class="import-status" id="import-status" role="status" aria-live="polite"></p>
+    <form class="measurement-form" id="person-form" hidden>
+      <h4>新增人員</h4>
+      <div class="measurement-field">
+        <label for="new-person-name">人員姓名 *</label>
+        <input id="new-person-name" name="人員姓名" type="text" required>
+      </div>
+      <div class="measurement-field">
+        <label for="new-person-date">日期</label>
+        <input id="new-person-date" name="日期" type="date">
+      </div>
+      <div class="measurement-field">
+        <label for="new-person-disaster">災害類型</label>
+        <input id="new-person-disaster" name="災害類型" type="text">
+      </div>
+      <div class="measurement-field">
+        <label for="new-person-location">地點</label>
+        <input id="new-person-location" name="地點" type="text">
+      </div>
+      <div class="measurement-field">
+        <label for="new-person-team">所屬分隊</label>
+        <input id="new-person-team" name="所屬分隊" type="text">
+      </div>
+      <div class="measurement-form-actions">
+        <button class="form-button" id="cancel-person-button" type="button">取消</button>
+        <button class="form-button primary" type="submit">新增人員</button>
+      </div>
+    </form>
+    <section class="hero" aria-labelledby="person-name">
+      <div class="hero-copy">
+        <h2 id="person-name">33 芒果哥</h2>
+      </div>
+      <div class="hero-date"><span>紀錄日期</span><strong id="hero-date">2026 年 10 月 29 日</strong></div>
+    </section>
+
+    <section class="section" aria-labelledby="case-heading">
+      <div class="section-heading">
+        <h3 id="case-heading">案件基本資料</h3>
+        <p>未填寫欄位以「未提供」標示</p>
+      </div>
+      <div class="identity-grid">
+        <div class="identity-item"><span>災害類型</span><strong class="empty-value">未提供</strong></div>
+        <div class="identity-item"><span>地點</span><strong class="empty-value">未提供</strong></div>
+        <div class="identity-item"><span>所屬分隊</span><strong class="empty-value">未提供</strong></div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="overview-heading">
+      <div class="section-heading">
+        <h3 id="overview-heading">監測概況</h3>
+        <p id="summary-meta">共 2 筆測量紀錄 · 20:21–21:28</p>
+      </div>
+      <div class="stat-grid">
+        <article class="stat-card">
+          <div class="stat-label"><span class="stat-dot"></span>最新心律 HR</div>
+          <div class="stat-value"><strong data-stat-value="hr">82</strong><span>次/min</span></div>
+          <p class="stat-change" data-stat-change="hr">前次 114 次/min · ↓ 32</p>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label"><span class="stat-dot"></span>最新血氧 SpO₂</div>
+          <div class="stat-value"><strong data-stat-value="spo2">97</strong><span>%</span></div>
+          <p class="stat-change" data-stat-change="spo2">前次 97% · 持平</p>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label"><span class="stat-dot"></span>最新血壓 BP</div>
+          <div class="stat-value"><strong data-stat-value="bp">147/92</strong><span>mmHg</span></div>
+          <p class="stat-change" data-stat-change="bp">前次 154/89 mmHg</p>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label"><span class="stat-dot"></span>最新體溫</div>
+          <div class="stat-value"><strong data-stat-value="temp">36.4</strong><span>°C</span></div>
+          <p class="stat-change" data-stat-change="temp">前次 36.6 °C</p>
+        </article>
+      </div>
+    </section>
+
+    <div class="trend-grid">
+    <section class="section" aria-labelledby="trend-heading">
+      <div class="section-heading">
+        <h3 id="trend-heading">心律變化</h3>
+        <p>依測量時間排序</p>
+      </div>
+      <div class="trend-card">
+        <div class="trend-head">
+          <div>
+            <h4>HR 心律趨勢</h4>
+            <p>單位：次/min</p>
+          </div>
+          <div class="trend-key"><span><i class="legend-line"></i>心律</span><span id="trend-time">20:21 → 21:28</span></div>
+        </div>
+        <div class="chart-wrap">
+          <svg class="chart" id="heart-rate-chart" viewBox="0 0 800 180" role="img" aria-labelledby="chart-title chart-desc">
+            <title id="chart-title">心律由 114 降至 82 次每分鐘</title>
+            <desc id="chart-desc">20 點 21 分測得 114，21 點 28 分測得 82。</desc>
+            <defs><linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#176b59" stop-opacity=".16"/><stop offset="1" stop-color="#176b59" stop-opacity="0"/></linearGradient></defs>
+            <line class="grid-line" x1="70" y1="35" x2="770" y2="35"/>
+            <line class="grid-line" x1="70" y1="80" x2="770" y2="80"/>
+            <line class="grid-line" x1="70" y1="125" x2="770" y2="125"/>
+            <text x="12" y="39">120</text><text x="20" y="84">100</text><text x="27" y="129">80</text>
+            <path class="area" d="M120 48.5 L720 120.5 L720 145 L120 145 Z"/>
+            <path class="trend-line" d="M120 48.5 L720 120.5"/>
+            <circle class="point" cx="120" cy="48.5" r="6"/>
+            <circle class="point" cx="720" cy="120.5" r="6"/>
+            <text class="value-label" x="120" y="31" text-anchor="middle">114</text>
+            <text class="value-label" x="720" y="102" text-anchor="middle">82</text>
+            <text x="120" y="168" text-anchor="middle">20:21</text>
+            <text x="720" y="168" text-anchor="middle">21:28</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="blood-pressure-heading">
+      <div class="section-heading">
+        <h3 id="blood-pressure-heading">血壓變化</h3>
+        <p>收縮壓與舒張壓 · mmHg</p>
+      </div>
+      <div class="trend-card">
+        <div class="trend-head">
+          <div>
+            <h4>血壓趨勢</h4>
+          </div>
+          <div class="trend-key"><span id="bp-trend-time">20:21 → 21:28</span></div>
+        </div>
+        <div class="chart-wrap">
+          <svg class="chart" id="blood-pressure-chart" viewBox="0 0 800 180" role="img" aria-labelledby="bp-chart-title bp-chart-desc">
+            <title id="bp-chart-title">每筆測量的收縮壓與舒張壓區間</title>
+            <desc id="bp-chart-desc">每筆測量以直條表示血壓範圍，上端為收縮壓，下端為舒張壓。20 點 21 分為 154/89，21 點 28 分為 147/92 mmHg。</desc>
+            <defs><linearGradient id="bpRangeGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#df7059"/><stop offset="1" stop-color="#647fd0"/></linearGradient></defs>
+            <line class="grid-line" x1="70" y1="35" x2="770" y2="35"/>
+            <line class="grid-line" x1="70" y1="51.7" x2="770" y2="51.7"/>
+            <line class="grid-line" x1="70" y1="68.3" x2="770" y2="68.3"/>
+            <line class="grid-line" x1="70" y1="85" x2="770" y2="85"/>
+            <line class="grid-line" x1="70" y1="101.7" x2="770" y2="101.7"/>
+            <line class="grid-line" x1="70" y1="118.3" x2="770" y2="118.3"/>
+            <line class="grid-line" x1="70" y1="135" x2="770" y2="135"/>
+            <text x="55" y="39" text-anchor="end">180</text><text x="55" y="55.7" text-anchor="end">160</text><text x="55" y="72.3" text-anchor="end">140</text><text x="55" y="89" text-anchor="end">120</text><text x="55" y="105.7" text-anchor="end">100</text><text x="55" y="122.3" text-anchor="end">80</text><text x="55" y="139" text-anchor="end">60</text>
+            <rect class="bp-range-bar" x="112" y="56.7" width="16" height="54.1" rx="8"/>
+            <circle class="bp-systolic-point" cx="120" cy="56.7" r="5"/>
+            <circle class="bp-diastolic-point" cx="120" cy="110.8" r="5"/>
+            <text class="bp-systolic-label" x="120" y="45.7" text-anchor="middle">154</text>
+            <text class="bp-diastolic-label" x="120" y="128.8" text-anchor="middle">89</text>
+            <rect class="bp-range-bar" x="712" y="62.5" width="16" height="45.8" rx="8"/>
+            <circle class="bp-systolic-point" cx="720" cy="62.5" r="5"/>
+            <circle class="bp-diastolic-point" cx="720" cy="108.3" r="5"/>
+            <text class="bp-systolic-label" x="720" y="51.5" text-anchor="middle">147</text>
+            <text class="bp-diastolic-label" x="720" y="126.3" text-anchor="middle">92</text>
+            <text x="120" y="168" text-anchor="middle">20:21</text>
+            <text x="720" y="168" text-anchor="middle">21:28</text>
+          </svg>
+        </div>
+        <div class="bp-legend" aria-label="圖表圖例">
+          <span><i class="bp-dot systolic"></i>收縮壓</span>
+          <span><i class="bp-dot diastolic"></i>舒張壓</span>
+        </div>
+      </div>
+    </section>
+    <section class="section" aria-labelledby="spo2-heading">
+      <div class="section-heading">
+        <h3 id="spo2-heading">SpO₂ 變化</h3>
+        <p>血氧 · %</p>
+      </div>
+      <div class="trend-card">
+        <div class="trend-head">
+          <div>
+            <h4>血氧趨勢</h4>
+          </div>
+          <div class="trend-key"><span id="spo2-trend-time">20:21 → 21:28</span></div>
+        </div>
+        <div class="chart-wrap">
+          <svg class="chart" id="spo2-chart" viewBox="0 0 800 180" role="img" aria-labelledby="spo2-chart-title spo2-chart-desc">
+            <title id="spo2-chart-title">血氧趨勢</title>
+            <desc id="spo2-chart-desc">20 點 21 分與 21 點 28 分血氧均為 97%。</desc>
+            <line class="grid-line" x1="70" y1="35" x2="770" y2="35"/>
+            <line class="grid-line" x1="70" y1="85" x2="770" y2="85"/>
+            <line class="grid-line" x1="70" y1="135" x2="770" y2="135"/>
+            <text x="55" y="39" text-anchor="end">100</text><text x="55" y="89" text-anchor="end">95</text><text x="55" y="139" text-anchor="end">90</text>
+            <path class="spo2-line" d="M120 65 L720 65"/>
+            <circle class="spo2-point" cx="120" cy="65" r="5"/>
+            <circle class="spo2-point" cx="720" cy="65" r="5"/>
+            <text class="spo2-label" x="720" y="52" text-anchor="middle">97</text>
+            <text x="120" y="168" text-anchor="middle">20:21</text>
+            <text x="720" y="168" text-anchor="middle">21:28</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+    <section class="section" aria-labelledby="temperature-heading">
+      <div class="section-heading">
+        <h3 id="temperature-heading">體溫變化</h3>
+        <p>體溫 · °C</p>
+      </div>
+      <div class="trend-card">
+        <div class="trend-head">
+          <div>
+            <h4>體溫趨勢</h4>
+          </div>
+          <div class="trend-key"><span id="temperature-trend-time">20:21 → 21:28</span></div>
+        </div>
+        <div class="chart-wrap">
+          <svg class="chart" id="temperature-chart" viewBox="0 0 800 180" role="img" aria-labelledby="temperature-chart-title temperature-chart-desc">
+            <title id="temperature-chart-title">體溫趨勢</title>
+            <desc id="temperature-chart-desc">20 點 21 分測得 36.6 度，21 點 28 分測得 36.4 度。</desc>
+            <line class="grid-line" x1="70" y1="35" x2="770" y2="35"/>
+            <line class="grid-line" x1="70" y1="85" x2="770" y2="85"/>
+            <line class="grid-line" x1="70" y1="135" x2="770" y2="135"/>
+            <text x="55" y="39" text-anchor="end">36.8</text><text x="55" y="89" text-anchor="end">36.5</text><text x="55" y="139" text-anchor="end">36.2</text>
+            <path class="temperature-line" d="M120 68.3 L720 101.7"/>
+            <circle class="temperature-point" cx="120" cy="68.3" r="5"/>
+            <circle class="temperature-point" cx="720" cy="101.7" r="5"/>
+            <text class="temperature-label" x="720" y="88" text-anchor="middle">36.4</text>
+            <text x="120" y="168" text-anchor="middle">20:21</text>
+            <text x="720" y="168" text-anchor="middle">21:28</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+    </div>
+
+    <section class="section" aria-labelledby="measurements-heading">
+      <div class="section-heading">
+        <h3 id="measurements-heading">測量紀錄</h3>
+        <div class="measurement-actions">
+          <button class="measurement-action primary" id="add-measurement-button" type="button" aria-controls="measurement-form" aria-expanded="false" disabled>新增測量紀錄</button>
+        </div>
+      </div>
+      <form class="measurement-form" id="measurement-form" hidden>
+        <h4 id="measurement-form-title">新增測量紀錄</h4>
+        <div class="measurement-field measurement-group-field">
+          <label for="measurement-group">休息站群組 *</label>
+          <select id="measurement-group" name="measurement-group" required>
+            <option value="new">新增休息站群組</option>
+          </select>
+        </div>
+        <div class="measurement-field" id="station-entry-field" hidden>
+          <label for="station-entry-time">進入休息站時間 *</label>
+          <input id="station-entry-time" name="進入休息站時間" type="text" data-time inputmode="numeric" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:mm" title="請以 24 小時制輸入，例如 18:30">
+        </div>
+        <div class="measurement-field" id="station-exit-field" hidden>
+          <label for="station-exit-time">離開休息站時間</label>
+          <input id="station-exit-time" name="離開休息站時間" type="text" data-time inputmode="numeric" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:mm" title="請以 24 小時制輸入，例如 18:30">
+        </div>
+        <div class="measurement-field">
+          <label for="measurement-time">測量時間 *</label>
+          <input id="measurement-time" name="測量時間" type="text" data-time inputmode="numeric" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:mm" title="請以 24 小時制輸入，例如 18:30" required>
+        </div>
+        <div class="measurement-field">
+          <label for="measurement-hr">HR 心律（次/min）</label>
+          <input id="measurement-hr" name="HR心律(次/min)" type="number" min="0" step="1">
+        </div>
+        <div class="measurement-field">
+          <label for="measurement-spo2">SpO₂ 血氧（%）</label>
+          <input id="measurement-spo2" name="SpO2(%)" type="number" min="0" max="100" step="1">
+        </div>
+        <div class="measurement-field">
+          <label for="measurement-rr">RR 呼吸（下/min）</label>
+          <input id="measurement-rr" name="RR呼吸(下/min)" type="number" min="0" step="1">
+        </div>
+        <div class="measurement-field">
+          <label for="measurement-systolic">收縮壓（mmHg）</label>
+          <input id="measurement-systolic" name="收縮壓(mmHg)" type="number" min="0" step="1">
+        </div>
+        <div class="measurement-field">
+          <label for="measurement-diastolic">舒張壓（mmHg）</label>
+          <input id="measurement-diastolic" name="舒張壓(mmHg)" type="number" min="0" step="1">
+        </div>
+        <div class="measurement-field">
+          <label for="measurement-temperature">體溫（°C）</label>
+          <input id="measurement-temperature" name="體溫(°C)" type="number" min="0" step="0.1">
+        </div>
+        <fieldset class="measurement-field checkbox-field">
+          <legend>症狀（可複選）</legend>
+          <div class="checkbox-options">
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="無">無</label>
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="頭暈">頭暈</label>
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="頭痛">頭痛</label>
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="噁心">噁心</label>
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="抽筋">抽筋</label>
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="心悸">心悸</label>
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="胸痛">胸痛</label>
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="呼吸困難">呼吸困難</label>
+            <label class="checkbox-option"><input type="checkbox" name="症狀" value="其他">其他</label>
+          </div>
+        </fieldset>
+        <div class="measurement-field" id="measurement-symptoms-other-field" hidden>
+          <label for="measurement-symptoms-other">其他症狀</label>
+          <input id="measurement-symptoms-other" name="症狀其他" type="text">
+        </div>
+        <fieldset class="measurement-field checkbox-field">
+          <legend>處置（可複選）</legend>
+          <div class="checkbox-options">
+            <label class="checkbox-option"><input type="checkbox" name="處置" value="休息">休息</label>
+            <label class="checkbox-option"><input type="checkbox" name="處置" value="降溫">降溫</label>
+            <label class="checkbox-option"><input type="checkbox" name="處置" value="補水">補水</label>
+            <label class="checkbox-option"><input type="checkbox" name="處置" value="持續觀察">持續觀察</label>
+            <label class="checkbox-option"><input type="checkbox" name="處置" value="通知醫療人員">通知醫療人員</label>
+            <label class="checkbox-option"><input type="checkbox" name="處置" value="後送/送醫">後送/送醫</label>
+          </div>
+        </fieldset>
+        <fieldset class="measurement-field checkbox-field">
+          <legend>結果（可複選）</legend>
+          <div class="checkbox-options">
+            <label class="checkbox-option"><input type="checkbox" name="結果" value="返勤">返勤</label>
+            <label class="checkbox-option"><input type="checkbox" name="結果" value="暫緩返勤">暫緩返勤</label>
+            <label class="checkbox-option"><input type="checkbox" name="結果" value="送醫">送醫</label>
+          </div>
+        </fieldset>
+        <div class="measurement-field" id="measurement-hospital-field" hidden>
+          <label for="measurement-hospital">醫院名稱</label>
+          <input id="measurement-hospital" name="醫院名稱" type="text">
+        </div>
+        <div class="measurement-field measurement-note-field">
+          <label for="measurement-note">備註</label>
+          <textarea id="measurement-note" name="備註"></textarea>
+        </div>
+        <div class="measurement-form-actions">
+          <button class="form-button" id="cancel-measurement-button" type="button">取消</button>
+          <button class="form-button primary" type="submit">儲存測量紀錄</button>
+        </div>
+      </form>
+      <div class="timeline" id="timeline">
+        <section class="rehab-group">
+          <div class="rehab-group-heading">
+            <h4>REHAB 紀錄 1</h4>
+            <div class="stay-times" aria-label="REHAB 紀錄 1 的休息站時間">
+              <div class="stay-time"><span>進入休息站時間</span><strong>20:18</strong></div>
+              <div class="stay-time"><span>離開休息站時間</span><strong>21:35</strong></div>
+            </div>
+          </div>
+          <div class="rehab-group-measurements">
+            <article class="measurement-card">
+              <div class="measurement-time"><strong>20:21</strong><span>第 1 次測量</span></div>
+              <div class="measurement-content">
+                <div class="measurement-title"><h4>生命徵象</h4><span class="observer">監測人員：乙丸</span></div>
+                <div class="vital-grid">
+                  <div class="vital"><span>HR 心律</span><strong>114 <small>次/min</small></strong></div>
+                  <div class="vital"><span>SpO₂ 血氧</span><strong>97 <small>%</small></strong></div>
+                  <div class="vital"><span>RR 呼吸</span><strong>18 <small>下/min</small></strong></div>
+                  <div class="vital"><span>收縮壓</span><strong>154 <small>mmHg</small></strong></div>
+                  <div class="vital"><span>舒張壓</span><strong>89 <small>mmHg</small></strong></div>
+                  <div class="vital"><span>體溫</span><strong>36.6 <small>°C</small></strong></div>
+                </div>
+                <div class="detail-row">
+                  <div class="detail"><span class="detail-label">症狀</span><span class="tags"><span class="tag">無</span></span></div>
+                  <div class="detail"><span class="detail-label">處置</span><span class="tags"><span class="tag">休息</span></span></div>
+                  <div class="detail"><span class="detail-label">結果</span><span class="tags"><span class="tag result">反勤</span></span></div>
+                </div>
+              </div>
+            </article>
+            <article class="measurement-card">
+              <div class="measurement-time"><strong>21:28</strong><span>第 2 次測量</span></div>
+              <div class="measurement-content">
+                <div class="measurement-title"><h4>生命徵象</h4><span class="observer">監測人員：沛</span></div>
+                <div class="vital-grid">
+                  <div class="vital"><span>HR 心律</span><strong>82 <small>次/min</small></strong></div>
+                  <div class="vital"><span>SpO₂ 血氧</span><strong>97 <small>%</small></strong></div>
+                  <div class="vital"><span>RR 呼吸</span><strong>18 <small>下/min</small></strong></div>
+                  <div class="vital"><span>收縮壓</span><strong>147 <small>mmHg</small></strong></div>
+                  <div class="vital"><span>舒張壓</span><strong>92 <small>mmHg</small></strong></div>
+                  <div class="vital"><span>體溫</span><strong>36.4 <small>°C</small></strong></div>
+                </div>
+                <div class="detail-row">
+                  <div class="detail"><span class="detail-label">症狀</span><span class="tags"><span class="tag">無</span></span></div>
+                  <div class="detail"><span class="detail-label">處置</span><span class="tags"><span class="tag">休息</span></span></div>
+                  <div class="detail"><span class="detail-label">結果</span><span class="tags"><span class="tag pending">未記錄</span></span></div>
+                </div>
+              </div>
+              </article>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    </main>
+  </div>
+
+  <footer>
+    <span>REHAB · 生命徵象監測摘要</span>
+    <span>個人健康資料請妥善保管</span>
+  </footer>
+
+  <script src="flatpickr.min.js"></script>
+  <script>
+    const fileInput = document.querySelector('#import-file');
+    const importStatus = document.querySelector('#import-status');
+    const addPersonButton = document.querySelector('#add-person-button');
+    const personForm = document.querySelector('#person-form');
+    const addMeasurementButton = document.querySelector('#add-measurement-button');
+    const exportButton = document.querySelector('#export-button');
+    const measurementForm = document.querySelector('#measurement-form');
+    const measurementFormTitle = document.querySelector('#measurement-form-title');
+    const measurementGroup = document.querySelector('#measurement-group');
+    const stationEntryField = document.querySelector('#station-entry-field');
+    const stationExitField = document.querySelector('#station-exit-field');
+    const stationEntryTime = document.querySelector('#station-entry-time');
+    const hospitalField = document.querySelector('#measurement-hospital-field');
+    const hospitalInput = document.querySelector('#measurement-hospital');
+    const symptomsOtherField = document.querySelector('#measurement-symptoms-other-field');
+    const symptomsOtherInput = document.querySelector('#measurement-symptoms-other');
+    const currentMonitoringPerson = document.querySelector('#current-monitoring-person');
+    const measurementTimeInput = document.querySelector('#measurement-time');
+    const measurementSubmitButton = measurementForm.querySelector('[type="submit"]');
+    const pageLayout = document.querySelector('#page-layout');
+    const recordSidebar = document.querySelector('#record-sidebar');
+    const recordList = document.querySelector('#record-list');
+    const svgNamespace = 'http://www.w3.org/2000/svg';
+    let importedRecords = [];
+    let importedAsArray = false;
+    let selectedRecordIndex = 0;
+    let editingMeasurement = null;
+    let preserveHiddenHospital = false;
+    let monitoringPersonBeforeEdit = '';
+
+    function isObject(value) {
+      return value !== null && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function initializeTimePicker(input) {
+      flatpickr(input, {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: 'H:i',
+        time_24hr: true,
+        disableMobile: true,
+        allowInput: true,
+        minuteIncrement: 1,
+        defaultHour: 0,
+        locale: { hourAriaLabel: '小時', minuteAriaLabel: '分鐘' }
+      });
+    }
+
+    function setTimeInputValue(input, value) {
+      if (input._flatpickr) input._flatpickr.setDate(value || '', false, 'H:i');
+      else input.value = value || '';
+    }
+
+    function validateCaseData(data, recordIndex, totalRecords) {
+      const recordLabel = totalRecords > 1 ? `第 ${recordIndex + 1} 筆個案` : '個案';
+      if (!isObject(data) || !isObject(data['案件基本資料'])) {
+        throw new Error(`${recordLabel}找不到「案件基本資料」物件。`);
+      }
+      if (!Array.isArray(data['REHAB記錄'])) {
+        throw new Error(`${recordLabel}找不到「REHAB記錄」陣列。`);
+      }
+      data['REHAB記錄'].forEach((record, recordIndex) => {
+        if (!isObject(record) || !Array.isArray(record['測量紀錄'])) {
+          throw new Error(`${recordLabel}的第 ${recordIndex + 1} 筆 REHAB 記錄缺少「測量紀錄」陣列。`);
+        }
+        record['測量紀錄'].forEach((measurement, measurementIndex) => {
+          if (!isObject(measurement)) {
+            throw new Error(`${recordLabel}的第 ${recordIndex + 1} 筆 REHAB 記錄中，第 ${measurementIndex + 1} 筆測量資料格式錯誤。`);
+          }
+        });
+      });
+      return data;
+    }
+
+    function validateData(data) {
+      const records = Array.isArray(data) ? data : [data];
+      if (records.length === 0) throw new Error('檔案中沒有個案紀錄。');
+      records.forEach((record, index) => validateCaseData(record, index, records.length));
+      return records;
+    }
+
+    function displayValue(value) {
+      if (typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))) {
+        const text = String(value).trim();
+        return text || '未提供';
+      }
+      return '未提供';
+    }
+
+    function numericValue(value) {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
+      return null;
+    }
+
+    function formatDate(value) {
+      const date = displayValue(value);
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+      return match ? `${match[1]} 年 ${Number(match[2])} 月 ${Number(match[3])} 日` : date;
+    }
+
+    function makeElement(tag, className, text) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (text !== undefined) element.textContent = text;
+      return element;
+    }
+
+    function measurementsFrom(data) {
+      return data['REHAB記錄'].flatMap(record => record['測量紀錄']);
+    }
+
+    function renderRecordList(records, selectedIndex = 0) {
+      recordList.replaceChildren();
+      const hasMultipleRecords = records.length > 1;
+      recordSidebar.hidden = !hasMultipleRecords;
+      pageLayout.classList.toggle('has-sidebar', hasMultipleRecords);
+      if (!hasMultipleRecords) return;
+      records.forEach((record, index) => {
+        const info = record['案件基本資料'];
+        const option = makeElement('button', 'record-option', displayValue(info['人員姓名']));
+        option.type = 'button';
+        option.setAttribute('aria-pressed', String(index === selectedIndex));
+        option.addEventListener('click', () => selectRecord(index));
+        recordList.append(option);
+      });
+    }
+
+    function selectRecord(index) {
+      if (!Number.isInteger(index) || index < 0 || index >= importedRecords.length) {
+        setImportStatus('無法切換紀錄，請重新匯入檔案。', true);
+        return;
+      }
+      closePersonForm();
+      closeMeasurementForm();
+      const selected = importedRecords[index];
+      selectedRecordIndex = index;
+      renderData(selected);
+      renderRecordList(importedRecords, index);
+      const info = selected['案件基本資料'];
+      setImportStatus(`目前顯示第 ${index + 1} 筆：${displayValue(info['人員姓名'])} · ${formatDate(info['日期'])}`);
+    }
+
+    function setText(selector, value) {
+      document.querySelector(selector).textContent = value;
+    }
+
+    function comparisonText(current, previous, unit, decimals = 0) {
+      const previousNumber = numericValue(previous);
+      const currentNumber = numericValue(current);
+      if (previousNumber === null || currentNumber === null) {
+        return previousNumber === null ? '前次未提供' : `前次 ${displayValue(previous)} ${unit}`;
+      }
+      const difference = Number((currentNumber - previousNumber).toFixed(decimals));
+      const trend = difference === 0 ? '持平' : `${difference > 0 ? '↑' : '↓'} ${Math.abs(difference)}`;
+      return `前次 ${displayValue(previous)} ${unit} · ${trend}`;
+    }
+
+    function renderSummary(data, measurements) {
+      const latest = measurements[measurements.length - 1] || {};
+      const previous = measurements[measurements.length - 2] || {};
+      const stats = [
+        ['hr', 'HR心律(次/min)', '次/min', 0],
+        ['spo2', 'SpO2(%)', '%', 1],
+        ['bp', null, 'mmHg', 0],
+        ['temp', '體溫(°C)', '°C', 1]
+      ];
+
+      stats.forEach(([key, field, unit, decimals]) => {
+        const value = key === 'bp'
+          ? `${displayValue(latest['收縮壓(mmHg)'])}/${displayValue(latest['舒張壓(mmHg)'])}`
+          : displayValue(latest[field]);
+        setText(`[data-stat-value="${key}"]`, value);
+
+        let comparison;
+        if (key === 'bp') {
+          comparison = `前次 ${displayValue(previous['收縮壓(mmHg)'])}/${displayValue(previous['舒張壓(mmHg)'])} mmHg`;
+        } else {
+          comparison = comparisonText(latest[field], previous[field], unit, decimals);
+        }
+        setText(`[data-stat-change="${key}"]`, comparison);
+      });
+
+      const times = measurements.map(item => displayValue(item['測量時間'])).filter(value => value !== '未提供');
+      const timeRange = times.length === 0 ? '' : ` · ${times[0]}${times.length > 1 ? `–${times[times.length - 1]}` : ''}`;
+      setText('#summary-meta', `共 ${measurements.length} 筆測量紀錄${timeRange}`);
+      setText('#trend-time', times.length === 0 ? '無測量時間' : `${times[0]}${times.length > 1 ? ` → ${times[times.length - 1]}` : ''}`);
+      setText('#bp-trend-time', times.length === 0 ? '測量時間未提供' : `${times[0]}${times.length > 1 ? ` → ${times[times.length - 1]}` : ''}`);
+    }
+
+    function svgElement(tag, attributes = {}, text) {
+      const element = document.createElementNS(svgNamespace, tag);
+      Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+      if (text !== undefined) element.textContent = text;
+      return element;
+    }
+
+    function renderChart(measurements) {
+      const chart = document.querySelector('#heart-rate-chart');
+      const points = measurements
+        .map(item => ({ time: displayValue(item['測量時間']), value: numericValue(item['HR心律(次/min)']) }))
+        .filter(point => point.value !== null);
+      chart.replaceChildren();
+      chart.setAttribute('aria-labelledby', 'chart-title chart-desc');
+
+      const titleText = points.length
+        ? `心律紀錄：${points[0].value} 至 ${points[points.length - 1].value} 次每分鐘`
+        : '目前沒有心律資料';
+      chart.append(svgElement('title', { id: 'chart-title' }, titleText));
+      chart.append(svgElement('desc', { id: 'chart-desc' }, points.map(point => `${point.time} ${point.value}`).join('，') || '沒有可繪製的心律測量值。'));
+
+      const defs = svgElement('defs');
+      const gradient = svgElement('linearGradient', { id: 'areaFill', x1: '0', x2: '0', y1: '0', y2: '1' });
+      gradient.append(svgElement('stop', { offset: '0', 'stop-color': '#176b59', 'stop-opacity': '.16' }));
+      gradient.append(svgElement('stop', { offset: '1', 'stop-color': '#176b59', 'stop-opacity': '0' }));
+      defs.append(gradient);
+      chart.append(defs);
+
+      if (points.length === 0) {
+        chart.append(svgElement('text', { x: '400', y: '95', 'text-anchor': 'middle' }, '暫無心律資料'));
+        return;
+      }
+
+      const minimum = Math.min(...points.map(point => point.value));
+      const maximum = Math.max(...points.map(point => point.value));
+      const low = Math.floor((minimum - 10) / 10) * 10;
+      const high = Math.max(low + 20, Math.ceil((maximum + 10) / 10) * 10);
+      const yFor = value => 125 - ((value - low) / (high - low)) * 90;
+      const xFor = index => points.length === 1 ? 420 : 120 + index * 600 / (points.length - 1);
+      [high, (high + low) / 2, low].forEach((tick, index) => {
+        const y = 35 + index * 45;
+        chart.append(svgElement('line', { class: 'grid-line', x1: '70', y1: y, x2: '770', y2: y }));
+        chart.append(svgElement('text', { x: '24', y: y + 4, 'text-anchor': 'end' }, String(tick)));
+      });
+
+      const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${xFor(index)} ${yFor(point.value)}`).join(' ');
+      if (points.length > 1) {
+        chart.append(svgElement('path', { class: 'area', d: `${path} L${xFor(points.length - 1)} 145 L${xFor(0)} 145 Z` }));
+        chart.append(svgElement('path', { class: 'trend-line', d: path }));
+      }
+
+      points.forEach((point, index) => {
+        const x = xFor(index);
+        const y = yFor(point.value);
+        chart.append(svgElement('circle', { class: 'point', cx: x, cy: y, r: '6' }));
+        chart.append(svgElement('text', { class: 'value-label', x, y: Math.max(20, y - 14), 'text-anchor': 'middle' }, String(point.value)));
+        chart.append(svgElement('text', { x, y: '168', 'text-anchor': 'middle' }, point.time));
+      });
+    }
+
+    function renderBloodPressureChart(measurements) {
+      const chart = document.querySelector('#blood-pressure-chart');
+      chart.replaceChildren();
+      chart.setAttribute('aria-labelledby', 'bp-chart-title bp-chart-desc');
+
+      const points = measurements.map((measurement, index) => ({
+        index,
+        time: displayValue(measurement['測量時間']),
+        systolic: numericValue(measurement['收縮壓(mmHg)']),
+        diastolic: numericValue(measurement['舒張壓(mmHg)'])
+      }));
+      const values = points.flatMap(point => [point.systolic, point.diastolic]).filter(value => value !== null);
+      const description = measurements.map(measurement =>
+        `${displayValue(measurement['測量時間'])} 收縮壓 ${displayValue(measurement['收縮壓(mmHg)'])}、舒張壓 ${displayValue(measurement['舒張壓(mmHg)'])}`
+      ).join('；');
+      chart.append(svgElement('title', { id: 'bp-chart-title' }, '每筆測量的收縮壓與舒張壓區間'));
+      chart.append(svgElement('desc', { id: 'bp-chart-desc' }, description
+        ? `每筆直條上端為收縮壓、下端為舒張壓。${description}`
+        : '沒有血壓測量紀錄。'));
+
+      if (values.length === 0) {
+        chart.append(svgElement('text', { x: '400', y: '95', 'text-anchor': 'middle' }, '暫無血壓資料'));
+        return;
+      }
+
+      const defs = svgElement('defs');
+      const gradient = svgElement('linearGradient', { id: 'bpRangeGradient', x1: '0', x2: '0', y1: '0', y2: '1' });
+      gradient.append(svgElement('stop', { offset: '0', 'stop-color': '#df7059' }));
+      gradient.append(svgElement('stop', { offset: '1', 'stop-color': '#647fd0' }));
+      defs.append(gradient);
+      chart.append(defs);
+
+      const minimum = Math.min(...values);
+      const maximum = Math.max(...values);
+      const step = Math.max(10, Math.ceil((maximum - minimum) / 4 / 10) * 10);
+      const low = Math.floor((minimum - 10) / step) * step;
+      const high = Math.max(low + step, Math.ceil((maximum + 10) / step) * step);
+      const top = 35;
+      const bottom = 135;
+      const yFor = value => bottom - ((value - low) / (high - low)) * (bottom - top);
+      const xFor = index => measurements.length === 1 ? 420 : 120 + index * 600 / (measurements.length - 1);
+
+      for (let tick = high; tick >= low; tick -= step) {
+        const y = yFor(tick);
+        chart.append(svgElement('line', { class: 'grid-line', x1: '70', y1: y, x2: '770', y2: y }));
+        chart.append(svgElement('text', { x: '55', y: y + 4, 'text-anchor': 'end' }, String(tick)));
+      }
+
+      points.forEach(point => {
+        const x = xFor(point.index);
+        const systolicY = point.systolic === null ? null : yFor(point.systolic);
+        const diastolicY = point.diastolic === null ? null : yFor(point.diastolic);
+
+        if (systolicY !== null && diastolicY !== null) {
+          const top = Math.min(systolicY, diastolicY);
+          const height = Math.max(3, Math.abs(diastolicY - systolicY));
+          chart.append(svgElement('rect', {
+            class: 'bp-range-bar',
+            x: x - 8,
+            y: top,
+            width: '16',
+            height,
+            rx: '8'
+          }));
+        }
+        if (systolicY !== null) {
+          chart.append(svgElement('circle', { class: 'bp-systolic-point', cx: x, cy: systolicY, r: '5' }));
+          chart.append(svgElement('text', {
+            class: 'bp-systolic-label',
+            x,
+            y: Math.max(20, systolicY - 11),
+            'text-anchor': 'middle'
+          }, String(point.systolic)));
+        }
+        if (diastolicY !== null) {
+          chart.append(svgElement('circle', { class: 'bp-diastolic-point', cx: x, cy: diastolicY, r: '5' }));
+          chart.append(svgElement('text', {
+            class: 'bp-diastolic-label',
+            x,
+            y: Math.min(153, diastolicY + 18),
+            'text-anchor': 'middle'
+          }, String(point.diastolic)));
+        }
+      });
+
+      const interval = Math.max(1, Math.ceil((measurements.length - 1) / 4));
+      measurements.forEach((measurement, index) => {
+        if (index !== 0 && index !== measurements.length - 1 && index % interval !== 0) return;
+        chart.append(svgElement('text', {
+          x: xFor(index),
+          y: '168',
+          'text-anchor': 'middle'
+        }, displayValue(measurement['測量時間'])));
+      });
+    }
+
+    function renderMetricChart(measurements, options) {
+      const chart = document.querySelector(`#${options.id}-chart`);
+      const latest = measurements[measurements.length - 1] || {};
+      const values = measurements
+        .map((measurement, index) => ({
+          index,
+          time: displayValue(measurement['測量時間']),
+          value: numericValue(measurement[options.field])
+        }))
+        .filter(point => point.value !== null);
+      const times = measurements.map(item => displayValue(item['測量時間'])).filter(time => time !== '未提供');
+      if (options.summarySelector) setText(options.summarySelector, displayValue(latest[options.field]));
+      setText(`#${options.id}-trend-time`, times.length
+        ? `${times[0]}${times.length > 1 ? ` → ${times[times.length - 1]}` : ''}`
+        : '測量時間未提供');
+
+      chart.replaceChildren();
+      chart.setAttribute('aria-labelledby', `${options.id}-chart-title ${options.id}-chart-desc`);
+      chart.append(svgElement('title', { id: `${options.id}-chart-title` }, options.title));
+      chart.append(svgElement('desc', { id: `${options.id}-chart-desc` },
+        values.map(point => `${point.time} ${options.title} ${point.value} ${options.unit}`).join('；') || `沒有${options.title}測量資料。`));
+
+      if (values.length === 0) {
+        chart.append(svgElement('text', { x: '400', y: '95', 'text-anchor': 'middle' }, `暫無${options.title}資料`));
+        return;
+      }
+
+      const minimum = Math.min(...values.map(point => point.value));
+      const maximum = Math.max(...values.map(point => point.value));
+      let low;
+      let high;
+      if (options.id === 'spo2') {
+        low = Math.max(0, Math.floor((minimum - 2) / 2) * 2);
+        high = Math.min(100, Math.ceil((maximum + 2) / 2) * 2);
+        if (maximum > 100) high = Math.ceil((maximum + 2) / 2) * 2;
+        if (high <= low) high = low + 4;
+      } else {
+        const padding = Math.max((maximum - minimum) * 0.25, 0.2);
+        low = Math.floor((minimum - padding) * 10) / 10;
+        high = Math.ceil((maximum + padding) * 10) / 10;
+        if (high <= low) high = low + 0.4;
+      }
+
+      const top = 35;
+      const bottom = 135;
+      const yFor = value => bottom - ((value - low) / (high - low)) * (bottom - top);
+      const xFor = index => measurements.length === 1 ? 420 : 120 + index * 600 / (measurements.length - 1);
+      const format = value => String(Number(value.toFixed(options.decimals)));
+      [high, (high + low) / 2, low].forEach((tick, index) => {
+        const y = top + index * (bottom - top) / 2;
+        chart.append(svgElement('line', { class: 'grid-line', x1: '70', y1: y, x2: '770', y2: y }));
+        chart.append(svgElement('text', { x: '55', y: y + 4, 'text-anchor': 'end' }, format(tick)));
+      });
+
+      const path = values.map((point, index) =>
+        `${index === 0 ? 'M' : 'L'}${xFor(point.index)} ${yFor(point.value)}`
+      ).join(' ');
+      if (values.length > 1) chart.append(svgElement('path', { class: options.lineClass, d: path }));
+      values.forEach(point => {
+        chart.append(svgElement('circle', {
+          class: options.pointClass,
+          cx: xFor(point.index),
+          cy: yFor(point.value),
+          r: '5'
+        }));
+      });
+      const latestPoint = values[values.length - 1];
+      chart.append(svgElement('text', {
+        class: options.labelClass,
+        x: xFor(latestPoint.index),
+        y: Math.max(20, yFor(latestPoint.value) - 13),
+        'text-anchor': 'middle'
+      }, format(latestPoint.value)));
+
+      const interval = Math.max(1, Math.ceil((measurements.length - 1) / 4));
+      measurements.forEach((measurement, index) => {
+        if (index !== 0 && index !== measurements.length - 1 && index % interval !== 0) return;
+        chart.append(svgElement('text', {
+          x: xFor(index),
+          y: '168',
+          'text-anchor': 'middle'
+        }, displayValue(measurement['測量時間'])));
+      });
+    }
+
+    function createStayTimes(record, index) {
+      const container = makeElement('div', 'stay-times');
+      container.setAttribute('aria-label', `REHAB 紀錄 ${index + 1} 的休息站時間`);
+      [['進入休息站時間', '進入休息站時間'], ['離開休息站時間', '離開休息站時間']].forEach(([field, label]) => {
+        const item = makeElement('div', 'stay-time');
+        item.append(makeElement('span', '', label));
+        item.append(makeElement('strong', '', displayValue(record[field])));
+        container.append(item);
+      });
+      return container;
+    }
+
+    function createStayTimeEditor(record, recordIndex, stayTimes, editButton) {
+      const form = makeElement('form', 'stay-time-edit-form');
+      form.hidden = true;
+      const entryField = makeElement('div', 'stay-time-edit-field');
+      const entryId = `stay-entry-${recordIndex}`;
+      const entryLabel = makeElement('label', '', '進入休息站時間');
+      entryLabel.htmlFor = entryId;
+      const entryInput = makeElement('input');
+      entryInput.id = entryId;
+      entryInput.name = '進入休息站時間';
+      entryInput.type = 'text';
+      entryInput.inputMode = 'numeric';
+      entryInput.pattern = '([01][0-9]|2[0-3]):[0-5][0-9]';
+      entryInput.placeholder = 'HH:mm';
+      entryInput.title = '請以 24 小時制輸入，例如 18:30';
+      entryInput.value = typeof record['進入休息站時間'] === 'string' ? record['進入休息站時間'] : '';
+      entryInput.setAttribute('data-time', '');
+      initializeTimePicker(entryInput);
+      entryField.append(entryLabel, entryInput);
+
+      const exitField = makeElement('div', 'stay-time-edit-field');
+      const exitId = `stay-exit-${recordIndex}`;
+      const exitLabel = makeElement('label', '', '離開休息站時間');
+      exitLabel.htmlFor = exitId;
+      const exitInput = makeElement('input');
+      exitInput.id = exitId;
+      exitInput.name = '離開休息站時間';
+      exitInput.type = 'text';
+      exitInput.inputMode = 'numeric';
+      exitInput.pattern = '([01][0-9]|2[0-3]):[0-5][0-9]';
+      exitInput.placeholder = 'HH:mm';
+      exitInput.title = '請以 24 小時制輸入，例如 18:30';
+      exitInput.value = typeof record['離開休息站時間'] === 'string' ? record['離開休息站時間'] : '';
+      exitInput.setAttribute('data-time', '');
+      initializeTimePicker(exitInput);
+      exitField.append(exitLabel, exitInput);
+
+      const saveButton = makeElement('button', 'form-button primary', '儲存時間');
+      saveButton.type = 'submit';
+      const cancelButton = makeElement('button', 'form-button', '取消');
+      cancelButton.type = 'button';
+      cancelButton.addEventListener('click', () => {
+        form.hidden = true;
+        stayTimes.hidden = false;
+        editButton.hidden = false;
+      });
+
+      form.append(entryField, exitField, saveButton, cancelButton);
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        record['進入休息站時間'] = entryInput.value || null;
+        record['離開休息站時間'] = exitInput.value || null;
+        renderData(importedRecords[selectedRecordIndex]);
+        renderRecordList(importedRecords, selectedRecordIndex);
+        setImportStatus('休息站時間已更新。請匯出更新檔案以保留資料。');
+      });
+
+      editButton.addEventListener('click', () => {
+        setTimeInputValue(entryInput, typeof record['進入休息站時間'] === 'string' ? record['進入休息站時間'] : '');
+        setTimeInputValue(exitInput, typeof record['離開休息站時間'] === 'string' ? record['離開休息站時間'] : '');
+        stayTimes.hidden = true;
+        editButton.hidden = true;
+        form.hidden = false;
+        entryInput.focus();
+      });
+      return form;
+    }
+
+    function appendDetail(container, label, values, kind = '') {
+      const row = makeElement('div', 'detail');
+      row.append(makeElement('span', 'detail-label', label));
+      const tags = makeElement('span', 'tags');
+      const items = Array.isArray(values) ? values.map(displayValue).filter(value => value !== '未提供') : [];
+      (items.length ? items : ['未記錄']).forEach(value => {
+        const className = `tag${kind ? ` ${kind}` : ''}${items.length ? '' : ' pending'}`;
+        tags.append(makeElement('span', className, value));
+      });
+      row.append(tags);
+      container.append(row);
+    }
+
+    function appendVital(container, label, value, unit) {
+      const item = makeElement('div', 'vital');
+      item.append(makeElement('span', '', label));
+      const strong = makeElement('strong');
+      strong.append(document.createTextNode(displayValue(value)));
+      strong.append(document.createTextNode(' '));
+      strong.append(makeElement('small', '', unit));
+      item.append(strong);
+      container.append(item);
+    }
+
+    function renderMeasurements(records) {
+      const timeline = document.querySelector('#timeline');
+      timeline.replaceChildren();
+      if (records.length === 0) {
+        timeline.append(makeElement('p', 'section-note', '此檔案沒有 REHAB 紀錄。'));
+        return;
+      }
+
+      records.forEach((record, recordIndex) => {
+        const group = makeElement('section', 'rehab-group');
+        const heading = makeElement('div', 'rehab-group-heading');
+        heading.append(makeElement('h4', '', `REHAB 紀錄 ${recordIndex + 1}`));
+        const stayTimes = createStayTimes(record, recordIndex);
+        const editStayTimeButton = makeElement('button', 'measurement-action', '修改休息站時間');
+        editStayTimeButton.type = 'button';
+        editStayTimeButton.setAttribute('aria-label', `修改 REHAB 紀錄 ${recordIndex + 1} 的休息站時間`);
+        heading.append(stayTimes, editStayTimeButton);
+        heading.append(createStayTimeEditor(record, recordIndex, stayTimes, editStayTimeButton));
+        group.append(heading);
+
+        const groupMeasurements = makeElement('div', 'rehab-group-measurements');
+        const measurements = record['測量紀錄'];
+        if (measurements.length === 0) {
+          groupMeasurements.append(makeElement('p', 'rehab-group-note', '此 REHAB 紀錄沒有測量資料。'));
+        } else {
+          measurements.forEach((measurement, index) => {
+            const card = makeElement('article', 'measurement-card');
+            const time = makeElement('div', 'measurement-time');
+            time.append(makeElement('strong', '', displayValue(measurement['測量時間'])));
+            time.append(makeElement('span', '', `第 ${index + 1} 次測量`));
+
+            const content = makeElement('div', 'measurement-content');
+            const title = makeElement('div', 'measurement-title');
+            title.append(makeElement('h4', '', '生命徵象'));
+            title.append(makeElement('span', 'observer', `監測人員：${displayValue(measurement['監測人員'])}`));
+            const editButton = makeElement('button', 'measurement-action', '修改');
+            editButton.type = 'button';
+            editButton.setAttribute('aria-label', `修改第 ${index + 1} 次測量`);
+            editButton.addEventListener('click', () => openMeasurementForEdit(recordIndex, index));
+            title.append(editButton);
+
+            const vitals = makeElement('div', 'vital-grid');
+            appendVital(vitals, 'HR 心律', measurement['HR心律(次/min)'], '次/min');
+            appendVital(vitals, 'SpO₂ 血氧', measurement['SpO2(%)'], '%');
+            appendVital(vitals, 'RR 呼吸', measurement['RR呼吸(下/min)'], '下/min');
+            appendVital(vitals, '收縮壓', measurement['收縮壓(mmHg)'], 'mmHg');
+            appendVital(vitals, '舒張壓', measurement['舒張壓(mmHg)'], 'mmHg');
+            appendVital(vitals, '體溫', measurement['體溫(°C)'], '°C');
+
+            const details = makeElement('div', 'detail-row');
+            const symptoms = Array.isArray(measurement['症狀']) ? measurement['症狀'].slice() : [];
+            if (measurement['症狀其他']) symptoms.push(`其他：${displayValue(measurement['症狀其他'])}`);
+            appendDetail(details, '症狀', symptoms);
+            appendDetail(details, '處置', measurement['處置']);
+            appendDetail(details, '結果', measurement['結果'], 'result');
+            if (measurement['醫院名稱']) appendDetail(details, '醫院', [measurement['醫院名稱']]);
+            if (measurement['備註']) appendDetail(details, '備註', [measurement['備註']]);
+
+            content.append(title, vitals, details);
+            card.append(time, content);
+            groupMeasurements.append(card);
+          });
+        }
+        group.append(groupMeasurements);
+        timeline.append(group);
+      });
+    }
+
+    function renderData(data) {
+      const caseInfo = data['案件基本資料'];
+      const measurements = measurementsFrom(data);
+      setText('#person-name', displayValue(caseInfo['人員姓名']));
+      setText('#hero-date', formatDate(caseInfo['日期']));
+
+      const identity = document.querySelector('.identity-grid');
+      identity.replaceChildren();
+      [['災害類型', '災害類型'], ['地點', '地點'], ['所屬分隊', '所屬分隊']].forEach(([label, key]) => {
+        const item = makeElement('div', 'identity-item');
+        item.append(makeElement('span', '', label));
+        item.append(makeElement('strong', displayValue(caseInfo[key]) === '未提供' ? 'empty-value' : '', displayValue(caseInfo[key])));
+        identity.append(item);
+      });
+
+      renderSummary(data, measurements);
+      renderChart(measurements);
+      renderBloodPressureChart(measurements);
+      renderMetricChart(measurements, {
+        id: 'spo2',
+        field: 'SpO2(%)',
+        title: 'SpO₂',
+        unit: '%',
+        decimals: 1,
+        lineClass: 'spo2-line',
+        pointClass: 'spo2-point',
+        labelClass: 'spo2-label'
+      });
+      renderMetricChart(measurements, {
+        id: 'temperature',
+        field: '體溫(°C)',
+        title: '體溫',
+        unit: '°C',
+        decimals: 1,
+        lineClass: 'temperature-line',
+        pointClass: 'temperature-point',
+        labelClass: 'temperature-label'
+      });
+      renderMeasurements(data['REHAB記錄']);
+    }
+
+    function setImportStatus(message, isError = false) {
+      importStatus.textContent = message;
+      importStatus.dataset.error = String(isError);
+    }
+
+    function closePersonForm() {
+      personForm.reset();
+      personForm.hidden = true;
+      addPersonButton.setAttribute('aria-expanded', 'false');
+    }
+
+    function openPersonForm() {
+      closeMeasurementForm();
+      personForm.reset();
+      const now = new Date();
+      personForm.elements.namedItem('日期').value =
+        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      personForm.hidden = false;
+      addPersonButton.setAttribute('aria-expanded', 'true');
+      personForm.elements.namedItem('人員姓名').focus();
+    }
+
+    function addPerson(formData) {
+      const person = {
+        '案件基本資料': {
+          '日期': optionalText(formData, '日期'),
+          '災害類型': optionalText(formData, '災害類型'),
+          '地點': optionalText(formData, '地點'),
+          '所屬分隊': optionalText(formData, '所屬分隊'),
+          '人員姓名': optionalText(formData, '人員姓名')
+        },
+        'REHAB記錄': []
+      };
+      importedRecords.push(person);
+      importedAsArray = true;
+      selectedRecordIndex = importedRecords.length - 1;
+      addMeasurementButton.disabled = false;
+      exportButton.disabled = false;
+      closePersonForm();
+      renderRecordList(importedRecords, selectedRecordIndex);
+      renderData(person);
+      setImportStatus(`已新增人員「${displayValue(person['案件基本資料']['人員姓名'])}」。可新增測量紀錄並匯出檔案保存。`);
+    }
+
+    function setMeasurementFormOpen(isOpen) {
+      measurementForm.hidden = !isOpen;
+      addMeasurementButton.setAttribute('aria-expanded', String(isOpen));
+      if (isOpen) {
+        populateMeasurementGroups();
+        updateStationFields();
+        if (!editingMeasurement) {
+          const now = new Date();
+          setTimeInputValue(measurementTimeInput,
+            `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        }
+        measurementTimeInput.focus();
+      }
+    }
+
+    function populateMeasurementGroups() {
+      const groups = importedRecords[selectedRecordIndex]['REHAB記錄'];
+      measurementGroup.replaceChildren();
+      groups.forEach((group, index) => {
+        const entry = displayValue(group['進入休息站時間']);
+        const exit = displayValue(group['離開休息站時間']);
+        const option = makeElement('option', '', `第 ${index + 1} 組｜進入 ${entry}｜離開 ${exit}`);
+        option.value = String(index);
+        measurementGroup.append(option);
+      });
+      const newGroupOption = makeElement('option', '', '新增休息站群組');
+      newGroupOption.value = 'new';
+      measurementGroup.append(newGroupOption);
+      measurementGroup.value = groups.length > 0 ? String(groups.length - 1) : 'new';
+    }
+
+    function updateStationFields() {
+      const isNewGroup = !editingMeasurement && measurementGroup.value === 'new';
+      stationEntryField.hidden = !isNewGroup;
+      stationExitField.hidden = !isNewGroup;
+      stationEntryTime.required = isNewGroup;
+    }
+
+    function updateHospitalField(clearWhenHidden = false) {
+      const needsHospitalName = measurementForm.querySelector('input[name="結果"][value="送醫"]').checked;
+      hospitalField.hidden = !needsHospitalName;
+      if (!needsHospitalName && clearWhenHidden) hospitalInput.value = '';
+    }
+
+    function updateSymptomsOtherField(clearWhenHidden = false) {
+      const needsOtherSymptoms = measurementForm.querySelector('input[name="症狀"][value="其他"]').checked;
+      symptomsOtherField.hidden = !needsOtherSymptoms;
+      if (!needsOtherSymptoms && clearWhenHidden) symptomsOtherInput.value = '';
+    }
+
+    function optionalNumber(formData, name) {
+      const value = formData.get(name).trim();
+      if (!value) return null;
+      const number = Number(value);
+      if (!Number.isFinite(number)) throw new Error(`${name}必須是有效數字。`);
+      return number;
+    }
+
+    function optionalText(formData, name) {
+      const value = formData.get(name).trim();
+      return value || null;
+    }
+
+    function measurementFromForm(formData) {
+      const symptoms = formData.getAll('症狀').map(value => String(value).trim()).filter(Boolean);
+      if (symptoms.length > 1) {
+        const noneIndex = symptoms.indexOf('無');
+        if (noneIndex !== -1) symptoms.splice(noneIndex, 1);
+      }
+      const symptomsOther = symptoms.includes('其他') ? optionalText(formData, '症狀其他') : null;
+      const treatments = formData.getAll('處置').map(value => String(value).trim()).filter(Boolean);
+      const results = formData.getAll('結果').map(value => String(value).trim()).filter(Boolean);
+      let hospitalName = optionalText(formData, '醫院名稱');
+      if (!results.includes('送醫') && !preserveHiddenHospital) hospitalName = null;
+      return {
+        '測量時間': optionalText(formData, '測量時間'),
+        '監測人員': currentMonitoringPerson.value.trim() || null,
+        'HR心律(次/min)': optionalNumber(formData, 'HR心律(次/min)'),
+        'SpO2(%)': optionalNumber(formData, 'SpO2(%)'),
+        'RR呼吸(下/min)': optionalNumber(formData, 'RR呼吸(下/min)'),
+        '收縮壓(mmHg)': optionalNumber(formData, '收縮壓(mmHg)'),
+        '舒張壓(mmHg)': optionalNumber(formData, '舒張壓(mmHg)'),
+        '體溫(°C)': optionalNumber(formData, '體溫(°C)'),
+        '備註': optionalText(formData, '備註'),
+        '症狀': symptoms,
+        '症狀其他': symptomsOther,
+        '處置': treatments,
+        '結果': results,
+        '醫院名稱': hospitalName
+      };
+    }
+
+    function addMeasurement(formData) {
+      const record = importedRecords[selectedRecordIndex];
+      if (!record) throw new Error('請先匯入個案資料。');
+      const measurement = measurementFromForm(formData);
+
+      let group;
+      if (formData.get('measurement-group') === 'new') {
+        group = {
+          '進入休息站時間': formData.get('進入休息站時間'),
+          '離開休息站時間': optionalText(formData, '離開休息站時間'),
+          '測量紀錄': []
+        };
+        record['REHAB記錄'].push(group);
+      } else {
+        const groupIndex = Number(formData.get('measurement-group'));
+        group = record['REHAB記錄'][groupIndex];
+        if (!group) throw new Error('找不到所選的休息站群組，請重新選擇。');
+      }
+      group['測量紀錄'].push(measurement);
+    }
+
+    function updateMeasurement(formData) {
+      const record = importedRecords[selectedRecordIndex];
+      const group = record && record['REHAB記錄'][editingMeasurement.groupIndex];
+      if (!group || !group['測量紀錄'][editingMeasurement.measurementIndex]) {
+        throw new Error('找不到要修改的測量紀錄，請重新匯入檔案。');
+      }
+      group['測量紀錄'][editingMeasurement.measurementIndex] = measurementFromForm(formData);
+    }
+
+    function listValues(value) {
+      if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean);
+      if (typeof value === 'string') return value.split(/[，,\n]/).map(item => item.trim()).filter(Boolean);
+      return [];
+    }
+
+    function openMeasurementForEdit(groupIndex, measurementIndex) {
+      const group = importedRecords[selectedRecordIndex]['REHAB記錄'][groupIndex];
+      const measurement = group && group['測量紀錄'][measurementIndex];
+      if (!measurement) {
+        setImportStatus('找不到要修改的測量紀錄，請重新匯入檔案。', true);
+        return;
+      }
+
+      closeMeasurementForm();
+      monitoringPersonBeforeEdit = currentMonitoringPerson.value;
+      editingMeasurement = { groupIndex, measurementIndex };
+      currentMonitoringPerson.value = typeof measurement['監測人員'] === 'string' ? measurement['監測人員'] : '';
+      measurementFormTitle.textContent = '修改測量紀錄';
+      measurementSubmitButton.textContent = '儲存修改';
+      setMeasurementFormOpen(true);
+      measurementGroup.value = String(groupIndex);
+      measurementGroup.disabled = true;
+      updateStationFields();
+      const symptoms = listValues(measurement['症狀']);
+      if (measurement['症狀其他'] && !symptoms.includes('其他')) symptoms.push('其他');
+      if (symptoms.length > 1) {
+        const noneIndex = symptoms.indexOf('無');
+        if (noneIndex !== -1) symptoms.splice(noneIndex, 1);
+      }
+      measurementForm.querySelectorAll('input[name="症狀"]').forEach(input => {
+        input.checked = symptoms.includes(input.value);
+      });
+
+      const treatments = listValues(measurement['處置']);
+      const results = listValues(measurement['結果']).map(value => value === '反勤' ? '返勤' : value);
+      const transferSelected = results.includes('送醫');
+      preserveHiddenHospital = !transferSelected && Boolean(measurement['醫院名稱']);
+      measurementForm.querySelectorAll('input[name="處置"]').forEach(input => {
+        input.checked = treatments.includes(input.value);
+      });
+      measurementForm.querySelectorAll('input[name="結果"]').forEach(input => {
+        input.checked = results.includes(input.value);
+      });
+
+      [
+        ['測量時間', measurement['測量時間']],
+        ['HR心律(次/min)', measurement['HR心律(次/min)']],
+        ['SpO2(%)', measurement['SpO2(%)']],
+        ['RR呼吸(下/min)', measurement['RR呼吸(下/min)']],
+        ['收縮壓(mmHg)', measurement['收縮壓(mmHg)']],
+        ['舒張壓(mmHg)', measurement['舒張壓(mmHg)']],
+        ['體溫(°C)', measurement['體溫(°C)']],
+        ['症狀其他', measurement['症狀其他']],
+        ['醫院名稱', measurement['醫院名稱']],
+        ['備註', measurement['備註']]
+      ].forEach(([name, value]) => {
+        const input = measurementForm.elements.namedItem(name);
+        if (name === '測量時間') setTimeInputValue(input, value);
+        else input.value = value === null || value === undefined ? '' : String(value);
+      });
+      updateSymptomsOtherField();
+      updateHospitalField();
+    }
+
+    function closeMeasurementForm(restoreMonitoringPerson = true) {
+      measurementForm.reset();
+      updateSymptomsOtherField(true);
+      preserveHiddenHospital = false;
+      updateHospitalField();
+      setTimeInputValue(stationEntryTime, '');
+      setTimeInputValue(document.querySelector('#station-exit-time'), '');
+      setTimeInputValue(measurementTimeInput, '');
+      if (editingMeasurement && restoreMonitoringPerson) {
+        currentMonitoringPerson.value = monitoringPersonBeforeEdit;
+      }
+      monitoringPersonBeforeEdit = '';
+      editingMeasurement = null;
+      measurementGroup.disabled = false;
+      measurementTimeInput.required = true;
+      measurementFormTitle.textContent = '新增測量紀錄';
+      measurementSubmitButton.textContent = '儲存測量紀錄';
+      setMeasurementFormOpen(false);
+    }
+
+    function exportRecords() {
+      if (importedRecords.length === 0) {
+        setImportStatus('請先匯入個案資料，再匯出更新檔案。', true);
+        return;
+      }
+      const data = importedAsArray ? importedRecords : importedRecords[0];
+      const content = JSON.stringify(data, null, 2);
+      const url = URL.createObjectURL(new Blob([content], { type: 'application/json;charset=utf-8' }));
+      const link = makeElement('a');
+      const personName = displayValue(importedRecords[selectedRecordIndex]['案件基本資料']['人員姓名']);
+      link.href = url;
+      link.download = `${personName.replace(/[\\/:*?"<>|]/g, '_')}-REHAB.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setImportStatus('更新資料已匯出為 JSON 檔案。');
+    }
+
+    document.querySelectorAll('[data-time]').forEach(initializeTimePicker);
+    document.querySelector('#import-button').addEventListener('click', () => fileInput.click());
+    addPersonButton.addEventListener('click', openPersonForm);
+    document.querySelector('#cancel-person-button').addEventListener('click', closePersonForm);
+    personForm.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!personForm.reportValidity()) return;
+      try {
+        addPerson(new FormData(personForm));
+      } catch (error) {
+        setImportStatus(`新增人員失敗：${error.message}`, true);
+      }
+    });
+    addMeasurementButton.addEventListener('click', () => {
+      closePersonForm();
+      closeMeasurementForm();
+      setMeasurementFormOpen(true);
+    });
+    measurementGroup.addEventListener('change', updateStationFields);
+    measurementForm.addEventListener('change', event => {
+      if (event.target.name === '症狀') {
+        const symptomOptions = measurementForm.querySelectorAll('input[name="症狀"]');
+        if (event.target.checked && event.target.value === '無') {
+          symptomOptions.forEach(input => {
+            if (input.value !== '無') input.checked = false;
+          });
+        } else if (event.target.checked) {
+          measurementForm.querySelector('input[name="症狀"][value="無"]').checked = false;
+        }
+        updateSymptomsOtherField(true);
+      } else if (event.target.name === '結果') {
+        preserveHiddenHospital = false;
+        updateHospitalField(true);
+      }
+    });
+    document.querySelector('#cancel-measurement-button').addEventListener('click', closeMeasurementForm);
+    exportButton.addEventListener('click', exportRecords);
+    measurementForm.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!measurementForm.reportValidity()) return;
+      try {
+        const isEditing = editingMeasurement !== null;
+        const formData = new FormData(measurementForm);
+        if (isEditing) updateMeasurement(formData);
+        else addMeasurement(formData);
+        renderData(importedRecords[selectedRecordIndex]);
+        renderRecordList(importedRecords, selectedRecordIndex);
+        closeMeasurementForm(!isEditing);
+        setImportStatus(`測量紀錄已${isEditing ? '更新' : '新增'}。請匯出更新檔案以保留資料。`);
+      } catch (error) {
+        setImportStatus(`新增失敗：${error.message}`, true);
+      }
+    });
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      try {
+        const contents = await file.text();
+        const parsedData = JSON.parse(contents);
+        const records = validateData(parsedData);
+        closePersonForm();
+        closeMeasurementForm();
+        importedRecords = records;
+        importedAsArray = Array.isArray(parsedData);
+        selectedRecordIndex = 0;
+        renderRecordList(records);
+        renderData(records[0]);
+        addMeasurementButton.disabled = false;
+        exportButton.disabled = false;
+        const totalMeasurements = records.reduce((total, record) => total + measurementsFrom(record).length, 0);
+        const countLabel = records.length > 1
+          ? `${records.length} 筆個案、${totalMeasurements} 筆測量紀錄`
+          : `${totalMeasurements} 筆測量紀錄`;
+        setImportStatus(`已匯入「${file.name}」，共 ${countLabel}${records.length > 1 ? '。可使用上方選單切換紀錄。' : '。'}`);
+      } catch (error) {
+        const message = error instanceof SyntaxError ? 'JSON 格式錯誤，請確認檔案內容。' : error.message;
+        setImportStatus(`匯入失敗：${message}`, true);
+      } finally {
+        fileInput.value = '';
+      }
+    });
+
+    renderData({
+      '案件基本資料': {
+        '日期': null,
+        '災害類型': null,
+        '地點': null,
+        '所屬分隊': null,
+        '人員姓名': '尚未匯入資料'
+      },
+      'REHAB記錄': []
+    });
+    setImportStatus('請先匯入個案 JSON 檔案以顯示資料。');
+  </script>
+</body>
+</html>
